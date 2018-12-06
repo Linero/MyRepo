@@ -4,12 +4,12 @@
 Engine::Engine()
 {
 
-	pinMode(12, OUTPUT);  //CH A -- HIGH = forwards and LOW = backwards
-	pinMode(13, OUTPUT); //CH B -- HIGH = forwards and LOW = backwards
-
-	//establish motor brake pins
-	pinMode(9, OUTPUT);  //brake (disable) CH A
-	pinMode(8, OUTPUT); //brake (disable) CH B
+	pinMode(12, OUTPUT); //Initiates Motor Channel A pin
+	pinMode(9, OUTPUT); //Initiates Brake Channel A pin
+	start = 0;
+	demo = 0;
+	pwm = 0;
+	dir = 0;
 
 }
 
@@ -47,25 +47,33 @@ void Engine::moveSolver(int dir) {
 void Engine::Run() {
 
 	getDataFromPC();
-	stepperMove();
+	motorMove();
 
 }
 
 
-void Engine::stepperMove() {
+void Engine::motorMove() {
 
-	if (this->start == 1) {
-
-		if (this->mode == 1) {
-
-			if (this->steps > 0) {
-				moveSolver(this->dir);
-				this->steps--;
-			}
-		}
-		else moveSolver(this->dir);
-
+	
+	if (start == 0) {
+		digitalWrite(9, HIGH);
 	}
+	else{
+		digitalWrite(9, LOW);
+		analogWrite(3, pwm);
+	}
+	if (dir == 0) {
+		digitalWrite(12, HIGH);
+	}
+	else {
+		digitalWrite(12, LOW);
+	}
+	if (demo == 1) {
+		Demo();
+	}
+
+
+
 }
 
 void Engine::getDataFromPC() {
@@ -76,7 +84,7 @@ void Engine::getDataFromPC() {
 
 		// the order of these IF clauses is significant
 
-		if (x == endMarker) {
+		if (x == this->endMarker) {
 			this->readInProgress = false;
 			this->inputBuffer[this->bytesRecvd] = 0;
 			parseData();
@@ -94,6 +102,10 @@ void Engine::getDataFromPC() {
 			this->bytesRecvd = 0;
 			this->readInProgress = true;
 		}
+
+		/*if (x == cmdMarker) {
+			DataSync();
+		}*/
 	}
 }
 
@@ -103,14 +115,72 @@ void Engine::parseData() {
 	char * strtokIndx; // this is used by strtok() as an index
 
 	strtokIndx = strtok(inputBuffer, ",");
-	this->steps = atoi(strtokIndx);
+	this->start = atoi(strtokIndx);
+	
+	strtokIndx = strtok(NULL, ",");
+	this->pwm = atoi(strtokIndx);
 
 	strtokIndx = strtok(NULL, ",");
 	this->dir = atoi(strtokIndx);
 
 	strtokIndx = strtok(NULL, ",");
-	this->start = atoi(strtokIndx);
-
-	strtokIndx = strtok(NULL, ",");
-	this->mode = atoi(strtokIndx);
+	this->demo = atoi(strtokIndx);
 }
+
+void Engine::Demo() {
+
+		//forward @ full speed
+		digitalWrite(12, HIGH); //Establishes forward direction of Channel A
+		digitalWrite(9, LOW);   //Disengage the Brake for Channel A
+		analogWrite(3, 255);   //Spins the motor on Channel A at full speed
+
+		delay(3000);
+
+		digitalWrite(9, HIGH); //Eengage the Brake for Channel A
+
+		delay(1000);
+
+		//backward @ half speed
+		digitalWrite(12, LOW); //Establishes backward direction of Channel A
+		digitalWrite(9, LOW);   //Disengage the Brake for Channel A
+		analogWrite(3, 123);   //Spins the motor on Channel A at half speed
+
+		delay(3000);
+
+		digitalWrite(9, HIGH); //Eengage the Brake for Channel A
+
+		delay(1000);
+
+	
+}
+
+/*void Engine::DataSync() {
+
+	while (Serial.available()) {
+		// get the new byte:
+		char inChar = (char)Serial.read();
+		// add it to the inputString:
+		inputString += inChar;
+		// if the incoming character is a newline, set a flag
+		// so the main loop can do something about it:
+
+		if (inChar == '\n') {
+			this->commandString = inputString.substring(1, inputString.length() - 2);
+			stringComplete = true;
+		}
+
+		if (stringComplete == true) {
+			if (commandString.equals("DEMO")) {
+
+				this->demo = 1;
+			}
+
+
+			stringComplete = false;
+		}
+
+
+
+
+	}
+}*/

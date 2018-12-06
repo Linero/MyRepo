@@ -8,6 +8,7 @@
 Engine engine;
 // the setup function runs once when you press reset or power the board
 void setup() {
+	Serial.begin(9600);
 
 }
 
